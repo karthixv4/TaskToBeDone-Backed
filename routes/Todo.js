@@ -35,30 +35,45 @@ todoRoute.post("/createTodo",async(req,res)=>{
 //useSWR
 todoRoute.put("/updateTodo",async(req,res)=>{
     try{
-        const {title, description, isCompleted, createdAt, dueAt,_id} = req.body;
-       
+        const {title, description, isCompleted, createdAt, dueAt,_id, category} = req.body;
         const  validateId  =  idSchema.parse(_id);
-        
-        const validateTodo = todoZodSchema.parse({
-            title, description, isCompleted, createdAt, dueAt
-        })
-        console.log("TODO: ", validateTodo);
-        const updatedTodo = await Todo.findByIdAndUpdate(
+        try {
+          // Validate todo properties using todoZodSchema
+          const validateTodo = todoZodSchema.parse({
+            title,
+            description,
+            isCompleted,
+            createdAt,
+            dueAt,
+            category
+          });
+          // Update the Todo in the database
+          const updatedTodo = await Todo.findByIdAndUpdate(
             validateId,
             validateTodo,
             { new: true }
-        );
-        if (!updatedTodo) {
+          ).populate('category','name');
+    
+          if (!updatedTodo) {
             return res.status(404).json({
               error: 'Todo not found'
             });
           }
-        res.status(200).json({
-        todo: updatedTodo
-        })
-        } catch(error){
-            res.status(400).json({error: error})
+    
+          res.status(200).json({
+            todo: updatedTodo
+          });
+        } catch (zodError) {
+          // Handle Zod validation errors
+          console.error("Zod validation error:", zodError);
+          res.status(400).json({
+            error: 'Invalid input data',
+            details: zodError.errors
+          });
         }
+      }catch(error){
+            res.status(400).json({error: error})
+      }
 
 });
 
