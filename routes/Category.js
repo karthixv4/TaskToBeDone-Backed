@@ -1,5 +1,5 @@
 const { Router } = require("express");
-const { TodoCategory } = require("../db");
+const { TodoCategory, Todo } = require("../db");
 const categoryRoute = Router();
 
 categoryRoute.post("/createCategory", async (req, res) => {
@@ -83,12 +83,26 @@ categoryRoute.put("/linkTodo", async (req, res) => {
   }
 });
 
-categoryRoute.delete("/deleteCategory", async (req,res)=>{
-    console.log("body: ", req.body);
-const {_id, todos} = req.body;
-console.log("id: ",_id," todos: ", todos);
+categoryRoute.delete("/deleteCategory", async (req, res) => {
+  const { _id, todos } = req.body;
+  try {
+    await Todo.deleteMany({ _id: { $in: todos } }, { new: true });
+    const deleteTodo = await TodoCategory.deleteOne({ _id: _id });
+    if (deleteTodo.deletedCount === 0) {
+      return res.status(404).json({
+        error: "Cat not found",
+      });
+    }
 
-res.status(200).json({ok:'ok'});
-
-})
+    res.status(200).json({
+      message: "Cat deleted successfully",
+      resp: deleteTodo,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: "Internal Server Error",
+    });
+  }
+});
 module.exports = categoryRoute;
